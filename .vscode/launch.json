@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "▶ Run Entire Application (One-Click)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "▶ Run Development Mode (Hot-Reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "args": ["--dev"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "🧪 Run All Tests (QA Suite)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/tests/qa_test.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

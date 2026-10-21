@@ -1,0 +1,8 @@
+{
+  "name": "Smart Traffic & Fuel Consumption Prediction System",
+  "description": "Physics-Informed Traffic Congestion & Energy Intelligence Platform with route comparison and sensor analytics.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -10,7 +10,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
 from sqlalchemy.orm import Session
 
-from api.database import engine, Base, get_db
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+from api.database import engine, Base, get_db, SessionLocal
 from api.db_models import DBUser, DBRoadSegment, DBPrediction, DBTripPrediction, DBModelVersion
 from api.auth import (
     get_password_hash,
@@ -29,12 +32,58 @@ from src.seed_data import run_seed
 # Initialize Database Schema
 Base.metadata.create_all(bind=engine)
 
+def init_default_db_records():
+    """Seed default users and road network segments if database is empty."""
+    db = SessionLocal()
+    try:
+        if db.query(DBUser).count() == 0:
+            default_users = [
+                DBUser(
+                    name="City Traffic Analyst",
+                    email="analyst@traffic.gov",
+                    hashed_password=get_password_hash("password123"),
+                    role="ANALYST"
+                ),
+                DBUser(
+                    name="Daily Commuter",
+                    email="commuter@test.com",
+                    hashed_password=get_password_hash("commuter123"),
+                    role="USER"
+                ),
+                DBUser(
+                    name="Senior Analyst",
+                    email="analyst@test.com",
+                    hashed_password=get_password_hash("analyst123"),
+                    role="ANALYST"
+                )
+            ]
+            db.add_all(default_users)
+            db.commit()
+
+        if db.query(DBRoadSegment).count() == 0:
+            segments = [
+                DBRoadSegment(segment_id="SEG-101", lane_count=2, road_type="arterial", speed_limit=50.0),
+                DBRoadSegment(segment_id="SEG-102", lane_count=3, road_type="highway", speed_limit=90.0),
+                DBRoadSegment(segment_id="SEG-103", lane_count=2, road_type="arterial", speed_limit=60.0),
+                DBRoadSegment(segment_id="SEG-104", lane_count=4, road_type="highway", speed_limit=100.0),
+            ]
+            db.add_all(segments)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[WARN] Error seeding initial records: {e}")
+    finally:
+        db.close()
+
 # Global Prediction Service Instance
 prediction_service: Optional[PredictionService] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global prediction_service
+    # Initialize default database accounts and segments
+    init_default_db_records()
+
     # Seed default models if not found
     try:
         c_model = CongestionModel.load(registry_path="models", model_type="congestion", version="v1.0.0")
@@ -47,7 +96,7 @@ async def lifespan(app: FastAPI):
     fe = FeatureEngineer()
     prediction_service = PredictionService(c_model, f_model, fe)
     yield
-    # Cleanup on shutdown (if needed)
+    # Cleanup on shutdown
     prediction_service = None
 
 app = FastAPI(
@@ -317,6 +366,26 @@ def get_metrics(model_type: str, version: Optional[str] = None, current_user: DB
         return prediction_service.fuel_model.metrics
     raise HTTPException(status_code=404, detail="Model type not found")
 
+# --- Static Frontend SPA Mounting ---
+dist_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dashboard", "dist")
+if os.path.exists(dist_dir):
+    assets_dir = os.path.join(dist_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Serve exact file if exists (e.g. favicon.svg, icons.svg)
+        target = os.path.join(dist_dir, full_path)
+        if full_path and os.path.isfile(target):
+            return FileResponse(target)
+        # Default fallback to index.html for React SPA routes
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return {"status": "Frontend build files missing. Run 'npm run build' inside /dashboard."}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 3000))
+    uvicorn.run("api.main:app", host="0.0.0.0", port=port, reload=True)

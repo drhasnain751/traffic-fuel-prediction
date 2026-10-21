@@ -105,3 +105,22 @@ The fuel prediction engine uses a **Physics Baseline + Machine Learning Residual
 
 **Q3: How is authorization handled?**  
 *Answer:* Authentication uses OAuth2 Bearer Tokens signed with JWT (`HS256`). Authorization uses FastAPI server-side dependencies (`require_role(["ANALYST"])`) to enforce RBAC on administrative endpoints like `/models/retrain`.
+
+---
+
+### 7. Single-Command Startup Guide (For Non-Technical Users)
+
+To run the complete system (Frontend, Backend, AI/ML Models, and Database) with a single command:
+
+```bash
+# Windows / Mac / Linux:
+python run.py
+```
+
+- **Windows Shortcut**: Double-click `run.bat`
+- **Linux/macOS Shortcut**: `./run.sh`
+- **Frontend Dashboard**: `http://localhost:3000`
+- **API Swagger Docs**: `http://localhost:3000/docs`
+- **Preloaded Demo Credentials**:
+  - `analyst@traffic.gov` / `password123` (Analyst Role)
+  - `commuter@test.com` / `commuter123` (User Role)

@@ -8,9 +8,10 @@ import requests
 import json
 import time
 import sys
+import os
 from datetime import datetime
 
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 class QATestSuite:
     def __init__(self):

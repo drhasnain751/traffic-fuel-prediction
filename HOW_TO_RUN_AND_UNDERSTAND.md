@@ -192,50 +192,91 @@ cd ..
 
 ---
 
+---
+
 ## Running the Application
 
-### Method 1: Manual Startup (Two Terminal Windows)
+### 🌟 Method 1: Single-Command Startup (RECOMMENDED FOR ALL USERS)
 
-#### Terminal 1: Start Backend
-```powershell
-# From project root
-cd "d:/New folder (2)/traffic-fuel-prediction"
-& ".\.venv\Scripts\Activate.ps1"
-uvicorn api.main:app --reload --port 8000
+You do **not** need multiple terminals, complicated scripts, or technical knowledge. A single command starts everything:
+- Checks & auto-installs Python packages
+- Checks & auto-trains AI/ML prediction models
+- Verifies & builds the frontend dashboard
+- Starts the unified server (Frontend + Backend REST API + Database + Models)
+- Automatically opens your default web browser
+
+#### Running in VS Code (Visual Studio Code):
+1. Open VS Code.
+2. Click **File** ➔ **Open Folder...** and select this project folder.
+3. Choose either:
+   - **Option A (Zero-Typing 1-Click)**: Press **`F5`** on your keyboard (or click **Run ➔ Start Debugging** / the green Play icon on the left sidebar).
+   - **Option B (VS Code Terminal)**: Press **`` Ctrl + ` ``** (or **Terminal ➔ New Terminal**) and type:
+     ```bash
+     python run.py
+     ```
+     *(or `python3 run.py` on Mac)*
+
+#### Windows (Outside VS Code):
+Open PowerShell or Command Prompt in the project folder and run:
+```cmd
+python run.py
+```
+*(Or simply double-click `run.bat`!)*
+
+#### macOS / Linux (Outside VS Code):
+Open Terminal in the project folder and run:
+```bash
+python3 run.py
+```
+*(Or run `./run.sh`)*
+
+#### What you will see:
+```text
+================================================================================
+   🚦 SMART TRAFFIC CONGESTION & FUEL PREDICTION SYSTEM
+================================================================================
+✓ Python runtime verified: 3.11.2
+[1/4] Checking Python dependencies...
+✓ All core Python packages are ready.
+[2/4] Checking AI/ML Prediction Models...
+✓ ML models ready: Congestion (RandomForest) & Fuel (GradientBoosting).
+[3/4] Checking Frontend Dashboard build...
+✓ Frontend dashboard is compiled and ready.
+[4/4] Launching Unified Server...
+
+================================================================================
+   🚀 SYSTEM IS LIVE AND OPERATIONAL!
+================================================================================
+
+   🌐 Frontend Dashboard:   http://localhost:3000
+   📡 Backend REST API:     http://localhost:3000
+   📚 Interactive API Docs: http://localhost:3000/docs
+   🧠 AI/ML Engine:         RandomForest (Congestion) + GradientBoosting (Fuel)
+   💾 Database:             SQLite (traffic.db) & Parquet Data Store
+
+   -------------------------------------------------------------------------
+   👥 DEFAULT DEMO CREDENTIALS (Pre-Configured in Database):
+   -------------------------------------------------------------------------
+      • Analyst Account:  analyst@traffic.gov  /  Password: password123  (Role: ANALYST)
+      • Commuter Account: commuter@test.com    /  Password: commuter123  (Role: USER)
+      • Senior Analyst:   analyst@test.com     /  Password: analyst123   (Role: ANALYST)
 ```
 
-**Expected Output:**
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000
-INFO:     Application startup complete
-```
+---
 
-The backend will:
-- Create SQLite database automatically (`traffic.db`)
-- Load ML models from `models/congestion/v1.0.0/` and `models/fuel/v1.0.0/`
-- Initialize database tables (users, predictions, trip_predictions, model_versions)
+### Method 2: Development Mode (With Live Code Reloading)
 
-#### Terminal 2: Start Frontend
-```powershell
-cd "d:/New folder (2)/traffic-fuel-prediction/dashboard"
-npm run dev
+If you are developing frontend code and want hot module reloading:
+```bash
+python run.py --dev
 ```
+This runs Vite (`http://localhost:5173`) and FastAPI (`http://localhost:8000`) simultaneously with automated proxying.
 
-**Expected Output:**
-```
-  VITE v8.2.0  ready in XXX ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  press h to show help
-```
-
-### Method 2: Using Docker (Optional)
+### Method 3: Using Docker (Optional)
 
 ```bash
 docker-compose up -d
 ```
-
-This starts both backend (8000) and frontend (5173) in containers.
 
 ---
 
