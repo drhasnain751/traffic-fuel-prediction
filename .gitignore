@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS/files
+.DS_Store
+Thumbs.db
+
+# Node/Vite
+node_modules/
+dist/
+build/
+*.log
+
+# Model artifacts / data caches
+*.pkl
+*.joblib
+*.h5
+*.model
+*.db
+
+# Local config
+*.local
