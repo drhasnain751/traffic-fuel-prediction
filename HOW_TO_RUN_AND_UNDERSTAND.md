@@ -7,11 +7,19 @@
 1. [What This System Does](#what-this-system-does)
 2. [How It Works (Under the Hood)](#how-it-works-under-the-hood)
 3. [System Architecture](#system-architecture)
-4. [Installation & Setup](#installation--setup)
-5. [Running the Application](#running-the-application)
-6. [Using the Application](#using-the-application)
-7. [Understanding the ML Models](#understanding-the-ml-models)
-8. [Database & Data Flow](#database--data-flow)
+4. [Installation & Prerequisites](#installation--prerequisites)
+5. [Running on VS Code (All Manual Methods)](#running-on-vs-code-all-manual-methods)
+   - [5.1 VS Code Method 1: Press F5 (Zero-Typing 1-Click)](#51-vs-code-method-1-press-f5-zero-typing-1-click--easiest-for-everyone)
+   - [5.2 VS Code Method 2: Single-Command Terminal](#52-vs-code-method-2-single-command-via-integrated-terminal)
+   - [5.3 VS Code Method 3: VS Code Command Palette Tasks](#53-vs-code-method-3-command-palette-task-runner)
+   - [5.4 VS Code Method 4: Split-Terminal Developer Mode](#54-vs-code-method-4-split-terminal-manual-mode-separate-backend--frontend)
+   - [5.5 VS Code Method 5: Using Python Virtual Environment (.venv)](#55-vs-code-method-5-using-a-virtual-environment-venv-in-vs-code)
+   - [5.6 VS Code Method 6: Running Automated QA Tests](#56-vs-code-method-6-running-automated-qa-tests-in-vs-code)
+   - [5.7 VS Code Troubleshooting & Tips](#57-vs-code-troubleshooting--tips-for-non-tech-users)
+6. [Running Outside VS Code (Windows / Mac / Linux / Docker)](#running-outside-vs-code-windows--mac--linux--docker)
+7. [Using the Application & Demo Logins](#using-the-application--demo-logins)
+8. [Understanding the ML Models](#understanding-the-ml-models)
+9. [Database & Data Flow](#database--data-flow)
 
 ---
 
@@ -192,100 +200,243 @@ cd ..
 
 ---
 
+## 5. Running on VS Code (All Manual Methods)
+
+This project has been pre-configured with **VS Code launch profiles (`.vscode/launch.json`)**, **automated task definitions (`.vscode/tasks.json`)**, and **workspace settings (`.vscode/settings.json`)**.
+
+Below are all the different ways you can run it inside Visual Studio Code, ranging from **1-click zero-terminal methods** to **advanced developer split-terminal setups**.
+
 ---
 
-## Running the Application
+### 5.1 VS Code Method 1: Press `F5` (Zero-Typing 1-Click — Easiest for Everyone)
 
-### 🌟 Method 1: Single-Command Startup (RECOMMENDED FOR ALL USERS)
+This is the recommended method for non-technical users, instructors, or evaluators who do not want to use command-line prompts.
 
-You do **not** need multiple terminals, complicated scripts, or technical knowledge. A single command starts everything:
-- Checks & auto-installs Python packages
-- Checks & auto-trains AI/ML prediction models
-- Verifies & builds the frontend dashboard
-- Starts the unified server (Frontend + Backend REST API + Database + Models)
-- Automatically opens your default web browser
+1. **Open VS Code**.
+2. Click **File** ➔ **Open Folder...** (or `Ctrl+K Ctrl+O` on Windows / `Cmd+O` on Mac) and select the `traffic-fuel-prediction` root folder.
+3. On your keyboard, press **`F5`**!
+   *(Alternatively: Click the **Run & Debug** play icon on the left sidebar, ensure **"▶ Run Entire Application (One-Click)"** is selected at the top dropdown, and click the green Play arrow).*
+4. **What happens:**
+   - VS Code automatically opens its integrated terminal at the bottom.
+   - It checks Python, verifies dependencies, trains the AI/ML models if needed, and builds the frontend.
+   - The unified server launches on port `3000`.
+   - **Your default web browser automatically pops open** to `http://localhost:3000`!
+5. **How to stop:** Click the orange square **Stop** button in the top floating debug toolbar (or press `Shift + F5`).
 
-#### Running in VS Code (Visual Studio Code):
-1. Open VS Code.
-2. Click **File** ➔ **Open Folder...** and select this project folder.
-3. Choose either:
-   - **Option A (Zero-Typing 1-Click)**: Press **`F5`** on your keyboard (or click **Run ➔ Start Debugging** / the green Play icon on the left sidebar).
-   - **Option B (VS Code Terminal)**: Press **`` Ctrl + ` ``** (or **Terminal ➔ New Terminal**) and type:
-     ```bash
-     python run.py
-     ```
-     *(or `python3 run.py` on Mac)*
-
-#### Windows (Outside VS Code):
-Open PowerShell or Command Prompt in the project folder and run:
-```cmd
-python run.py
-```
-*(Or simply double-click `run.bat`!)*
-
-#### macOS / Linux (Outside VS Code):
-Open Terminal in the project folder and run:
-```bash
-python3 run.py
-```
-*(Or run `./run.sh`)*
-
-#### What you will see:
 ```text
-================================================================================
-   🚦 SMART TRAFFIC CONGESTION & FUEL PREDICTION SYSTEM
-================================================================================
-✓ Python runtime verified: 3.11.2
-[1/4] Checking Python dependencies...
-✓ All core Python packages are ready.
-[2/4] Checking AI/ML Prediction Models...
-✓ ML models ready: Congestion (RandomForest) & Fuel (GradientBoosting).
-[3/4] Checking Frontend Dashboard build...
-✓ Frontend dashboard is compiled and ready.
-[4/4] Launching Unified Server...
-
-================================================================================
-   🚀 SYSTEM IS LIVE AND OPERATIONAL!
-================================================================================
-
-   🌐 Frontend Dashboard:   http://localhost:3000
-   📡 Backend REST API:     http://localhost:3000
-   📚 Interactive API Docs: http://localhost:3000/docs
-   🧠 AI/ML Engine:         RandomForest (Congestion) + GradientBoosting (Fuel)
-   💾 Database:             SQLite (traffic.db) & Parquet Data Store
-
-   -------------------------------------------------------------------------
-   👥 DEFAULT DEMO CREDENTIALS (Pre-Configured in Database):
-   -------------------------------------------------------------------------
-      • Analyst Account:  analyst@traffic.gov  /  Password: password123  (Role: ANALYST)
-      • Commuter Account: commuter@test.com    /  Password: commuter123  (Role: USER)
-      • Senior Analyst:   analyst@test.com     /  Password: analyst123   (Role: ANALYST)
+VS Code Window:
+┌─────────────────────────────────────────────────────────────┐
+│  ▶ Run Entire Application (One-Click) [F5]  [||] [■]       │
+├───────────────┬─────────────────────────────────────────────┤
+│ EXPLORER      │                                             │
+│ > api         │                                             │
+│ > dashboard   │                                             │
+│ > models      │                                             │
+│ > run.py      │                                             │
+├───────────────┴─────────────────────────────────────────────┤
+│ TERMINAL                                                    │
+│ 🚦 SMART TRAFFIC CONGESTION & FUEL PREDICTION SYSTEM       │
+│ ✓ Python runtime verified                                  │
+│ ✓ ML models ready: Congestion & Fuel                       │
+│ 🚀 SYSTEM IS LIVE: http://localhost:3000                   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Method 2: Development Mode (With Live Code Reloading)
+### 5.2 VS Code Method 2: Single-Command via Integrated Terminal
 
-If you are developing frontend code and want hot module reloading:
+If you prefer using the built-in terminal inside VS Code:
+
+1. Open the project folder in VS Code.
+2. Open the integrated terminal:
+   - Shortcut: Press **`` Ctrl + ` ``** (Windows/Linux) or **`` Cmd + ` ``** (macOS).
+   - Menu: Click **Terminal** ➔ **New Terminal**.
+3. Type the following command and press **Enter**:
+   ```bash
+   python run.py
+   ```
+   *(On macOS or if your default python is Python 2, use `python3 run.py`)*
+
+4. The system will start everything and auto-open your browser.
+5. **How to stop:** Click inside the terminal and press **`Ctrl + C`**.
+
+---
+
+### 5.3 VS Code Method 3: Command Palette Task Runner
+
+VS Code includes built-in task automation:
+
+1. Press **`Ctrl + Shift + P`** (Windows/Linux) or **`Cmd + Shift + P`** (macOS) to open the VS Code Command Palette.
+2. Type **`Tasks: Run Task`** and press **Enter**.
+3. Select **`Run Application (One-Click)`**.
+4. VS Code will spin up the terminal task and launch the platform.
+5. To run the automated tests instead, select **`Run Tests`**.
+
+---
+
+### 5.4 VS Code Method 4: Split-Terminal Manual Mode (Separate Backend & Frontend)
+
+If you are a developer and want live code hot-reloading for both Python and React/Vite independently:
+
+#### Quick Option: One-Command Dev Mode
+In the VS Code terminal, simply run:
 ```bash
 python run.py --dev
 ```
-This runs Vite (`http://localhost:5173`) and FastAPI (`http://localhost:8000`) simultaneously with automated proxying.
+*(This automatically runs both FastAPI on port 8000 and Vite on port 5173 with automatic API reverse-proxying).*
 
-### Method 3: Using Docker (Optional)
+#### Manual Split-Terminal Option:
+1. Open VS Code Terminal (`Ctrl + ` `).
+2. Click the **Split Terminal** icon (`| \ |`) in the top-right corner of the terminal panel (or press `Ctrl + Shift + 5`).
+3. You now have two side-by-side terminal panes:
 
+**In Pane 1 (Left - Backend API):**
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+*Expected: `Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)`*
+
+**In Pane 2 (Right - Frontend Dashboard):**
+```bash
+cd dashboard
+npm run dev
+```
+*Expected: `VITE ready at http://localhost:5173/`*
+
+4. Open your browser to **`http://localhost:5173`**. Any changes to `.tsx` or `.py` files will reload instantly.
+
+---
+
+### 5.5 VS Code Method 5: Using a Virtual Environment (`.venv`) in VS Code
+
+If you prefer isolating dependencies inside a local Python virtual environment:
+
+1. **Create Virtual Environment in VS Code Terminal:**
+   ```bash
+   # Windows:
+   python -m venv .venv
+   
+   # macOS / Linux:
+   python3 -m venv .venv
+   ```
+
+2. **Select Interpreter in VS Code:**
+   - Press **`Ctrl + Shift + P`** (or `Cmd + Shift + P`).
+   - Type **`Python: Select Interpreter`**.
+   - Choose the one marked `('.venv': venv) ./ .venv/Scripts/python.exe` (or `bin/python`).
+
+3. **Activate & Run:**
+   - Open a new terminal (`Terminal ➔ New Terminal`). VS Code will automatically activate `(.venv)`.
+   - Run:
+     ```bash
+     python run.py
+     ```
+   *(Any missing dependencies will be automatically installed into `.venv` on first run!)*
+
+---
+
+### 5.6 VS Code Method 6: Running Automated QA Tests in VS Code
+
+You can verify all endpoints, authentication, ML models, and RBAC security rules directly in VS Code:
+
+- **Via F5 Debugger**:
+  1. Click **Run & Debug** on the left bar.
+  2. In the dropdown, pick **`🧪 Run All Tests (QA Suite)`**.
+  3. Press **`F5`**.
+
+- **Via Terminal**:
+  ```bash
+  python tests/qa_test.py
+  ```
+
+**Expected output:**
+```text
+======================================================================
+TEST SUMMARY
+======================================================================
+✓ Signup - Create USER                               PASS
+✓ Signup - Create ANALYST                            PASS
+✓ Login - Valid credentials                          PASS
+✓ Login - Invalid password                           PASS
+✓ Predict Congestion                                 PASS
+✓ Predict Fuel                                       PASS
+✓ Compare Routes                                     PASS
+✓ Historical Trends                                  PASS
+✓ Data Sources Status                                PASS
+✓ Model Metrics                                      PASS
+✓ RBAC - USER denied retraining                      PASS
+✓ Retrain Model - ANALYST allowed                    PASS
+----------------------------------------------------------------------
+Total: 12 | Passed: 12 | Failed: 0 | Errors: 0
+Success Rate: 100.0%
+======================================================================
+```
+
+---
+
+### 5.7 VS Code Troubleshooting & Tips for Non-Tech Users
+
+- **Issue: "python is not recognized" in VS Code Terminal**:
+  - *Fix:* Ensure Python 3.9+ is installed from [python.org](https://www.python.org/downloads/). During Windows installation, check the box **"Add python.exe to PATH"**. In VS Code, press `Ctrl+Shift+P` ➔ `Python: Select Interpreter` and pick your installed Python.
+- **Issue: "Port 3000 is already in use"**:
+  - *Fix:* `run.py` automatically detects occupied ports and switches to `8080`, `5000`, or `8001`. You can also specify an exact port manually:
+    ```bash
+    python run.py --port 5000
+    ```
+- **Issue: "Browser did not open automatically"**:
+  - *Fix:* Simply click or copy-paste the URL shown in the terminal: `http://localhost:3000`.
+- **How to completely stop the application in VS Code**:
+  - Click into the terminal window and press **`Ctrl + C`**. If running via F5, click the red/orange square **Stop** button on the debug bar.
+
+---
+
+## 6. Running Outside VS Code (Windows / Mac / Linux / Docker)
+
+You can also run the system completely outside of VS Code using native OS tools:
+
+### Windows (Outside VS Code)
+- **Easiest:** Double-click **`run.bat`** in the project folder.
+- **Or via Command Prompt / PowerShell:**
+  ```cmd
+  cd "path\to\traffic-fuel-prediction"
+  python run.py
+  ```
+
+### macOS / Linux (Outside VS Code)
+- **Easiest:** Run the shell launcher:
+  ```bash
+  ./run.sh
+  ```
+- **Or via Terminal:**
+  ```bash
+  python3 run.py
+  ```
+
+### Docker (Optional)
 ```bash
 docker-compose up -d
 ```
 
 ---
 
-## Using the Application
+## 7. Using the Application & Demo Logins
 
 ### Access the Dashboard
-Open browser: **http://localhost:5173**
+Open your browser to: **`http://localhost:3000`** *(or `http://localhost:5173` in dev mode)*.
 
-### Step 1: Create Account
+### Ready-To-Use Demo Accounts (Pre-Seeded in Database)
+You do not need to register a new account to test; these accounts are already configured:
+- **Traffic Analyst Account** *(Full Admin Access + Model Retraining)*:
+  - **Email:** `analyst@traffic.gov`
+  - **Password:** `password123`
+  - **Role:** `ANALYST`
+- **Daily Commuter Account** *(Route Comparison & Congestion Prediction)*:
+  - **Email:** `commuter@test.com`
+  - **Password:** `commuter123`
+  - **Role:** `USER`
+
+### Or Create a New Account:
 1. Click "Signup" in the top menu
 2. Enter:
    - Name: `Test User`
@@ -348,7 +499,7 @@ Open browser: **http://localhost:5173**
 
 ---
 
-## Understanding the ML Models
+## 8. Understanding the ML Models
 
 ### Congestion Model (RandomForestRegressor)
 
@@ -393,7 +544,7 @@ Open browser: **http://localhost:5173**
 
 ---
 
-## Database & Data Flow
+## 9. Database & Data Flow
 
 ### SQLite Database Structure
 
