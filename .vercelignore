@@ -1,0 +1,15 @@
+api/
+dashboard/
+data/
+models/
+tests/
+src/*.py
+requirements.txt
+Dockerfile
+docker-compose.yml
+run.py
+run.sh
+run.bat
+*.db
+*.pkl
+*.parquet

@@ -4,30 +4,9 @@
     "app": {
       "root": ".",
       "framework": "vite"
-    },
-    "dashboard": {
-      "root": "dashboard",
-      "framework": "vite"
-    },
-    "api": {
-      "root": ".",
-      "framework": "fastapi",
-      "entrypoint": "api.main:app"
     }
   },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": {
-        "service": "api"
-      }
-    },
-    {
-      "source": "/dashboard/(.*)",
-      "destination": {
-        "service": "dashboard"
-      }
-    },
     {
       "source": "/(.*)",
       "destination": {
