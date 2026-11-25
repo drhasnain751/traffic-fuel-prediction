@@ -4,7 +4,7 @@ import pandas as pd
 from typing import List, Optional, Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends, status, Security, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Depends, status, Security, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
@@ -78,6 +78,8 @@ def init_default_db_records():
 # Global Prediction Service Instance
 prediction_service: Optional[PredictionService] = None
 
+MODELS_ROOT = os.getenv("MODELS_DIR", "/tmp/models" if os.getenv("VERCEL") else "models")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global prediction_service
@@ -86,12 +88,12 @@ async def lifespan(app: FastAPI):
 
     # Seed default models if not found
     try:
-        c_model = CongestionModel.load(registry_path="models", model_type="congestion", version="v1.0.0")
-        f_model = FuelModel.load(registry_path="models", model_type="fuel", version="v1.0.0")
+        c_model = CongestionModel.load(registry_path=MODELS_ROOT, model_type="congestion", version="v1.0.0")
+        f_model = FuelModel.load(registry_path=MODELS_ROOT, model_type="fuel", version="v1.0.0")
     except Exception:
         run_seed()
-        c_model = CongestionModel.load(registry_path="models", model_type="congestion", version="v1.0.0")
-        f_model = FuelModel.load(registry_path="models", model_type="fuel", version="v1.0.0")
+        c_model = CongestionModel.load(registry_path=MODELS_ROOT, model_type="congestion", version="v1.0.0")
+        f_model = FuelModel.load(registry_path=MODELS_ROOT, model_type="fuel", version="v1.0.0")
         
     fe = FeatureEngineer()
     prediction_service = PredictionService(c_model, f_model, fe)
@@ -115,17 +117,7 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def log_authorization_header(request: Request, call_next):
-    # Temporary middleware to log incoming Authorization header for debugging
-    try:
-        auth = request.headers.get("authorization")
-        # Use print to ensure output appears in the uvicorn stdout for easy debugging
-        print(f"[DEBUG] Incoming Authorization header: {auth}")
-    except Exception:
-        pass
-    response = await call_next(request)
-    return response
+router = APIRouter()
 
 # --- Pydantic Schemas ---
 class UserSignupRequest(BaseModel):
@@ -162,7 +154,7 @@ class RetrainRequest(BaseModel):
 
 # --- Authentication Endpoints ---
 
-@app.post("/auth/signup", response_model=TokenResponse)
+@router.post("/auth/signup", response_model=TokenResponse)
 def signup(req: UserSignupRequest, db: Session = Depends(get_db)):
     existing_user = db.query(DBUser).filter(DBUser.email == req.email).first()
     if existing_user:
@@ -186,7 +178,7 @@ def signup(req: UserSignupRequest, db: Session = Depends(get_db)):
         "user": {"id": new_user.id, "name": new_user.name, "email": new_user.email, "role": new_user.role}
     }
 
-@app.post("/auth/login", response_model=TokenResponse)
+@router.post("/auth/login", response_model=TokenResponse)
 def login(req: UserLoginRequest, db: Session = Depends(get_db)):
     user = db.query(DBUser).filter(DBUser.email == req.email).first()
     if not user or not verify_password(req.password, user.hashed_password):
@@ -199,7 +191,7 @@ def login(req: UserLoginRequest, db: Session = Depends(get_db)):
         "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
     }
 
-@app.get("/auth/me")
+@router.get("/auth/me")
 def get_me(current_user: DBUser = Depends(get_current_user)):
     return {
         "id": current_user.id,
@@ -210,7 +202,7 @@ def get_me(current_user: DBUser = Depends(get_current_user)):
 
 # --- Prediction & Analytics Endpoints ---
 
-@app.get("/predict-congestion")
+@router.get("/predict-congestion")
 def predict_congestion(segment_id: str, target_time: str = "Now", current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
     res = prediction_service.get_congestion(segment_id, target_time)
     
@@ -230,7 +222,7 @@ def predict_congestion(segment_id: str, target_time: str = "Now", current_user: 
 
     return res
 
-@app.post("/predict-fuel")
+@router.post("/predict-fuel")
 def predict_fuel(req: FuelRequest, current_user: DBUser = Depends(get_current_user), db: Session = Depends(get_db)):
     res = prediction_service.get_fuel_estimate(req.route, req.vehicle.dict())
     
@@ -249,11 +241,11 @@ def predict_fuel(req: FuelRequest, current_user: DBUser = Depends(get_current_us
 
     return res
 
-@app.post("/compare-routes")
+@router.post("/compare-routes")
 def compare_routes(req: RouteComparisonRequest, current_user: DBUser = Depends(get_current_user)):
     return prediction_service.compare_routes(req.route_a, req.route_b, req.vehicle.dict())
 
-@app.get("/analytics/history")
+@router.get("/analytics/history")
 def get_historical_trends(segment_id: str = "SEG-101", days: int = 7, current_user: DBUser = Depends(get_current_user)):
     """
     Returns real historical speed and volume data from processed dataset.
@@ -288,7 +280,7 @@ def get_historical_trends(segment_id: str = "SEG-101", days: int = 7, current_us
         ]
     }
 
-@app.get("/sources/status")
+@router.get("/sources/status")
 def get_data_sources_status(current_user: DBUser = Depends(get_current_user)):
     """
     Checks actual health of data source paths and external services.
@@ -325,7 +317,7 @@ def get_data_sources_status(current_user: DBUser = Depends(get_current_user)):
 
 # --- Management & Model Retraining Endpoints ---
 
-@app.post("/models/retrain")
+@router.post("/models/retrain")
 def retrain_model(
     req: RetrainRequest,
     current_user: DBUser = Depends(require_role(["ANALYST"])),
@@ -358,13 +350,17 @@ def retrain_model(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Model retraining failed: {str(e)}")
 
-@app.get("/models/metrics")
+@router.get("/models/metrics")
 def get_metrics(model_type: str, version: Optional[str] = None, current_user: DBUser = Depends(get_current_user)):
     if model_type == "congestion":
         return prediction_service.congestion_model.metrics
     elif model_type == "fuel":
         return prediction_service.fuel_model.metrics
     raise HTTPException(status_code=404, detail="Model type not found")
+
+# Mount routes under both /api (Vercel rewrite prefix) and root (local uvicorn)
+app.include_router(router, prefix="/api")
+app.include_router(router)
 
 # --- Static Frontend SPA Mounting ---
 dist_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dashboard", "dist")

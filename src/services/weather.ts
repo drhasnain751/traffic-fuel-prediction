@@ -156,3 +156,104 @@ export function applyWeatherScenario(
     };
   });
 }
+
+export interface HourlyForecastPoint {
+  timeIso: string;
+  hourLabel: string;
+  temperatureC: number;
+  precipitationMm: number;
+  windSpeedKmh: number;
+  visibilityM: number;
+  weatherCode: number;
+  weatherLabel: string;
+  estimatedFuelPenaltyPct: number;
+  recommendedSpeedFactorPct: number;
+}
+
+export async function fetchHourlyWeatherForecast(
+  lat: number,
+  lon: number,
+  signal?: AbortSignal
+): Promise<HourlyForecastPoint[]> {
+  const params = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: 'temperature_2m,precipitation,wind_speed_10m,visibility,weather_code',
+    forecast_days: '2',
+    timezone: 'auto',
+  });
+
+  const res = await fetch(`${OPEN_METEO_BASE}?${params.toString()}`, { signal });
+  if (!res.ok) {
+    throw new Error(`Forecast request failed (${res.status})`);
+  }
+
+  const data = await res.json();
+  const h = data?.hourly || {};
+  const times: string[] = h.time || [];
+  const temps: number[] = h.temperature_2m || [];
+  const precips: number[] = h.precipitation || [];
+  const winds: number[] = h.wind_speed_10m || [];
+  const visList: number[] = h.visibility || [];
+  const codes: number[] = h.weather_code || [];
+
+  const nowIsoPrefix = new Date().toISOString().slice(0, 13);
+  let startIdx = times.findIndex((t) => t.slice(0, 13) >= nowIsoPrefix);
+  if (startIdx < 0) startIdx = 0;
+
+  const sliceEnd = Math.min(times.length, startIdx + 24);
+  const points: HourlyForecastPoint[] = [];
+
+  for (let i = startIdx; i < sliceEnd; i++) {
+    const temp = Number(temps[i] ?? 20);
+    const precip = Number(precips[i] ?? 0);
+    const wind = Number(winds[i] ?? 10);
+    const vis = Number(visList[i] ?? 10000);
+    const code = Number(codes[i] ?? 0);
+
+    let fuelPenalty = 0;
+    let speedReduction = 0;
+
+    if (precip >= 5 || code === 65 || code >= 95) {
+      fuelPenalty += 12;
+      speedReduction -= 20;
+    } else if (precip >= 1) {
+      fuelPenalty += 8;
+      speedReduction -= 14;
+    } else if (precip > 0) {
+      fuelPenalty += 4;
+      speedReduction -= 7;
+    }
+
+    if (vis < 500 || code === 45 || code === 48) speedReduction -= 22;
+    else if (vis < 2000) speedReduction -= 12;
+
+    if (wind >= 35) {
+      fuelPenalty += 8;
+      speedReduction -= 6;
+    } else if (wind >= 20) {
+      fuelPenalty += 4;
+    }
+
+    if (temp >= 34) fuelPenalty += 7;
+    else if (temp >= 27) fuelPenalty += 3.5;
+    else if (temp <= 0) fuelPenalty += 8;
+    else if (temp < 10) fuelPenalty += 3;
+
+    points.push({
+      timeIso: times[i],
+      hourLabel: times[i].slice(11, 16),
+      temperatureC: temp,
+      precipitationMm: precip,
+      windSpeedKmh: wind,
+      visibilityM: vis,
+      weatherCode: code,
+      weatherLabel: describeWmoCode(code),
+      estimatedFuelPenaltyPct: Number(fuelPenalty.toFixed(1)),
+      recommendedSpeedFactorPct: Math.max(-35, speedReduction),
+    });
+  }
+
+  return points;
+}
+

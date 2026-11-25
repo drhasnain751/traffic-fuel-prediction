@@ -4,15 +4,26 @@ import {
   Crosshair,
   Fuel,
   Loader2,
+  LogOut,
   Navigation,
   RefreshCw,
 } from 'lucide-react';
 import { AddressSearchInput } from './components/AddressSearchInput';
+import { AdminPanelView } from './components/AdminPanelView';
+import { AuthModal } from './components/AuthModal';
 import { CalculationBreakdown } from './components/CalculationBreakdown';
+import { OverviewHomeView, type PageId } from './components/OverviewHomeView';
 import { PhysicsMethodologyView } from './components/PhysicsMethodologyView';
 import { RouteComparisonCards } from './components/RouteComparisonCards';
 import { RouteMap } from './components/RouteMap';
 import { ToastContainer, type ToastMessage } from './components/UIComponents';
+import { WeatherTrendsView } from './components/WeatherTrendsView';
+import {
+  getSavedSession,
+  getSavedTrips,
+  recordTripPrediction,
+  saveSession,
+} from './services/authStore';
 import { detectCurrentLocation, reverseGeocode } from './services/geocoding';
 import {
   analyzeRoutes,
@@ -24,15 +35,15 @@ import {
 import { extractRouteMidpoint, fetchDrivingRoutes } from './services/routing';
 import { fetchRouteWeather } from './services/weather';
 import type {
+  AppUser,
   Coordinates,
   EfficiencyUnit,
   RawOsrmRoute,
+  SavedTripRecord,
   VehicleCategoryId,
   WeatherScenario,
   WeatherWaypoint,
 } from './types/routing';
-
-type AppTab = 'optimizer' | 'methodology';
 
 const DEFAULT_ORIGIN: Coordinates = {
   lat: 30.2672,
@@ -47,7 +58,12 @@ const DEFAULT_DESTINATION: Coordinates = {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<AppTab>('optimizer');
+  const [activePage, setActivePage] = useState<PageId>('overview');
+
+  // Auth & trip history state
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => getSavedSession());
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [tripHistory, setTripHistory] = useState<SavedTripRecord[]>(() => getSavedTrips());
 
   // Route endpoints
   const [origin, setOrigin] = useState<Coordinates | null>(DEFAULT_ORIGIN);
@@ -75,6 +91,7 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
+  const lastLoggedRouteKeyRef = useRef<string>('');
 
   const addToast = useCallback(
     (type: 'success' | 'error' | 'info', title: string, message?: string) => {
@@ -203,12 +220,46 @@ export default function App() {
   const activeRoute =
     analyzedRoutes.find((r) => r.index === selectedRouteIndex) || analyzedRoutes[0] || null;
 
+  // Record a new trip evaluation once per origin/destination fetch
+  useEffect(() => {
+    if (!origin || !destination || !activeRoute) return;
+    const key = `${origin.lat.toFixed(4)},${origin.lon.toFixed(4)}->${destination.lat.toFixed(
+      4
+    )},${destination.lon.toFixed(4)}`;
+    if (lastLoggedRouteKeyRef.current === key) return;
+    lastLoggedRouteKeyRef.current = key;
+
+    const updated = recordTripPrediction({
+      userId: currentUser?.id || 'guest',
+      userName: currentUser?.name || 'Guest Evaluator',
+      originLabel: origin.label,
+      destinationLabel: destination.label,
+      routeSummary: activeRoute.summary,
+      distanceKm: activeRoute.distanceKm,
+      durationSec: activeRoute.adjustedDurationSec,
+      fuelL: activeRoute.fuelRequiredL,
+      cost: activeRoute.totalCost,
+      currencySymbol: currentCurrency.symbol,
+      vehicleName: currentVehicle.name,
+      weatherCondition: activeRoute.weatherSummary.dominantCondition,
+    });
+    setTripHistory(updated);
+  }, [
+    origin,
+    destination,
+    activeRoute,
+    currentUser,
+    currentCurrency.symbol,
+    currentVehicle.name,
+  ]);
+
   const handleUseGpsOrigin = async () => {
     setGpsLoading(true);
     try {
       const coords = await detectCurrentLocation();
       setOrigin(coords);
       setMapPickMode(null);
+      setActivePage('optimizer');
       addToast('success', 'GPS Location Detected', `Origin set to ${coords.label}`);
     } catch (err: any) {
       addToast('error', 'GPS Detection Failed', err?.message || 'Location access denied.');
@@ -256,6 +307,15 @@ export default function App() {
     }
   };
 
+  const handleSignOut = () => {
+    saveSession(null);
+    setCurrentUser(null);
+    if (activePage === 'admin') {
+      setActivePage('overview');
+    }
+    addToast('info', 'Signed Out', 'You are now viewing in open guest mode.');
+  };
+
   const displayedEfficiencyValue =
     efficiencyUnit === 'km_per_l'
       ? Number(baselineKmPerL.toFixed(1))
@@ -271,71 +331,144 @@ export default function App() {
     }
   };
 
+  const navLinks: Array<{ id: PageId; label: string }> = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'optimizer', label: 'Route Optimizer' },
+    { id: 'trends', label: 'Weather & Trends' },
+    { id: 'methodology', label: 'Physics Model' },
+    ...(currentUser?.role === 'ADMIN' ? [{ id: 'admin' as PageId, label: 'Admin' }] : []),
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthenticated={(user) => {
+          setCurrentUser(user);
+          addToast(
+            'success',
+            'Signed In',
+            `Welcome, ${user.name} (${user.role === 'ADMIN' ? 'Administrator' : 'User'})`
+          );
+        }}
+      />
 
-      {/* Top Bar Contract: [Brand wordmark] — [Nav links] — [1 Primary Action] */}
+      {/* Top Bar Contract: [Brand wordmark] — [4–5 concise single-line nav links] — [1 Primary Action / Account] */}
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
           <a
-            href="#top"
+            href="#overview"
             onClick={(e) => {
               e.preventDefault();
-              setActiveTab('optimizer');
+              setActivePage('overview');
             }}
             className="text-base sm:text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
           >
-            RouteFuel Intelligence
+            RouteFuel
           </a>
 
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <button
-              type="button"
-              onClick={() => setActiveTab('optimizer')}
-              className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer border-b-2 ${
-                activeTab === 'optimizer'
-                  ? 'text-slate-900 border-slate-900 font-semibold'
-                  : 'text-slate-500 border-transparent hover:text-slate-900'
-              }`}
-            >
-              Route Optimizer
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('methodology')}
-              className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer border-b-2 ${
-                activeTab === 'methodology'
-                  ? 'text-slate-900 border-slate-900 font-semibold'
-                  : 'text-slate-500 border-transparent hover:text-slate-900'
-              }`}
-            >
-              Physics Model
-            </button>
+          <nav
+            aria-label="Primary navigation"
+            className="hidden md:flex items-center gap-6 text-sm font-medium"
+          >
+            {navLinks.map((link) => (
+              <button
+                key={link.id}
+                type="button"
+                onClick={() => setActivePage(link.id)}
+                className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer border-b-2 ${
+                  activePage === link.id
+                    ? 'text-slate-900 border-slate-900 font-semibold'
+                    : 'text-slate-500 border-transparent hover:text-slate-900'
+                }`}
+              >
+                {link.label}
+              </button>
+            ))}
           </nav>
 
-          <div className="shrink-0">
-            <button
-              type="button"
-              onClick={handleUseGpsOrigin}
-              disabled={gpsLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              {gpsLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Crosshair className="w-3.5 h-3.5" />
-              )}
-              <span>{gpsLoading ? 'Detecting GPS...' : 'Detect GPS Origin'}</span>
-            </button>
+          <div className="flex items-center gap-3 shrink-0">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <span className="hidden sm:inline text-xs font-medium text-slate-600 whitespace-nowrap">
+                  {currentUser.name} · {currentUser.role}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(true)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                Sign In / Sign Up
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Mobile sub-navigation strip */}
+        <nav
+          aria-label="Mobile navigation"
+          className="md:hidden border-t border-slate-100 px-4 py-2 flex items-center gap-4 overflow-x-auto text-xs font-medium"
+        >
+          {navLinks.map((link) => (
+            <button
+              key={link.id}
+              type="button"
+              onClick={() => setActivePage(link.id)}
+              className={`py-1 whitespace-nowrap shrink-0 cursor-pointer border-b-2 ${
+                activePage === link.id
+                  ? 'text-slate-900 border-slate-900 font-semibold'
+                  : 'text-slate-500 border-transparent'
+              }`}
+            >
+              {link.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {activeTab === 'methodology' ? (
-          <PhysicsMethodologyView />
-        ) : (
+        {activePage === 'overview' && (
+          <OverviewHomeView
+            currentUser={currentUser}
+            activeRoute={activeRoute}
+            detectedRouteCount={analyzedRoutes.length}
+            currencySymbol={currentCurrency.symbol}
+            vehicleName={currentVehicle.name}
+            tripHistory={tripHistory}
+            onNavigate={setActivePage}
+            onOpenAuth={() => setAuthModalOpen(true)}
+          />
+        )}
+
+        {activePage === 'trends' && (
+          <WeatherTrendsView defaultLocation={origin || DEFAULT_ORIGIN} />
+        )}
+
+        {activePage === 'methodology' && <PhysicsMethodologyView />}
+
+        {activePage === 'admin' && (
+          <AdminPanelView
+            currentUser={currentUser}
+            tripHistory={tripHistory}
+            onTripHistoryChanged={setTripHistory}
+            onSessionUserUpdated={setCurrentUser}
+            onOpenAuth={() => setAuthModalOpen(true)}
+          />
+        )}
+
+        {activePage === 'optimizer' && (
           <>
             {/* Upper Workspace: Trip & Vehicle Config (4 cols) + Interactive Live Map (8 cols) */}
             <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -521,29 +654,46 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Action Button */}
-                <button
-                  type="button"
-                  disabled={!origin || !destination || loadingRoutes}
-                  onClick={() => {
-                    if (origin && destination) {
-                      loadLiveRouteAndWeather(origin, destination);
-                    }
-                  }}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  {loadingRoutes ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Fetching Routes & Weather...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Refresh Live Routes & Weather</span>
-                    </>
-                  )}
-                </button>
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={gpsLoading}
+                    onClick={handleUseGpsOrigin}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    {gpsLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Crosshair className="w-3.5 h-3.5" />
+                    )}
+                    <span>Use Live GPS</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!origin || !destination || loadingRoutes}
+                    onClick={() => {
+                      if (origin && destination) {
+                        lastLoggedRouteKeyRef.current = '';
+                        loadLiveRouteAndWeather(origin, destination);
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    {loadingRoutes ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Refresh Routes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Right 8 Cols: Live Interactive Map */}

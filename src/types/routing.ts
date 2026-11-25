@@ -82,8 +82,8 @@ export interface PenaltyFactor {
   id: string;
   label: string;
   measuredValue: string;
-  speedAdjustmentPct: number; // negative means speed reduction
-  fuelPenaltyPct: number; // positive means more fuel burn, negative means slight saving
+  speedAdjustmentPct: number;
+  fuelPenaltyPct: number;
   explanation: string;
 }
 
@@ -110,4 +110,31 @@ export interface AnalyzedRoute {
   weatherSummary: RouteWeatherSummary;
   isEconomical: boolean;
   isFastest: boolean;
+}
+
+export type UserRole = 'USER' | 'ADMIN';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export interface SavedTripRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  originLabel: string;
+  destinationLabel: string;
+  routeSummary: string;
+  distanceKm: number;
+  durationSec: number;
+  fuelL: number;
+  cost: number;
+  currencySymbol: string;
+  vehicleName: string;
+  weatherCondition: string;
+  createdAt: string;
 }

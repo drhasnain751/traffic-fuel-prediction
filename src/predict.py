@@ -65,7 +65,9 @@ class PredictionService:
         """
         Load historical processed dataset for real feature retrieval.
         """
-        data_path = os.path.join(os.path.dirname(__file__), "../data/processed/merged_data.parquet")
+        repo_path = os.path.join(os.path.dirname(__file__), "../data/processed/merged_data.parquet")
+        tmp_path = "/tmp/data/processed/merged_data.parquet"
+        data_path = tmp_path if (os.getenv("VERCEL") and os.path.exists(tmp_path)) else repo_path
         if os.path.exists(data_path):
             try:
                 self.processed_data = pd.read_parquet(data_path)

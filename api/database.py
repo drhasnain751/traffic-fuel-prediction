@@ -2,7 +2,8 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./traffic.db")
+_default_db = "sqlite:////tmp/traffic.db" if os.getenv("VERCEL") else "sqlite:///./traffic.db"
+DATABASE_URL = os.getenv("DATABASE_URL", _default_db)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 

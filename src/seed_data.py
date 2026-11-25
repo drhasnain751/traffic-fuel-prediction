@@ -10,10 +10,14 @@ from src.train_fuel_model import FuelModel
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+_IS_VERCEL = bool(os.getenv("VERCEL"))
+DATA_ROOT = os.getenv("DATA_DIR", "/tmp/data" if _IS_VERCEL else "data")
+MODELS_ROOT = os.getenv("MODELS_DIR", "/tmp/models" if _IS_VERCEL else "models")
+
 def generate_mock_data():
     logger.info("Generating initial sample data...")
-    os.makedirs('data/raw', exist_ok=True)
-    os.makedirs('data/processed', exist_ok=True)
+    os.makedirs(os.path.join(DATA_ROOT, 'raw'), exist_ok=True)
+    os.makedirs(os.path.join(DATA_ROOT, 'processed'), exist_ok=True)
     
     # Generate sample traffic data
     num_records = 2000
@@ -40,7 +44,7 @@ def generate_mock_data():
             })
             
     df_traffic = pd.DataFrame(data)
-    df_traffic.to_csv('data/raw/traffic.csv', index=False)
+    df_traffic.to_csv(os.path.join(DATA_ROOT, 'raw/traffic.csv'), index=False)
     
     # Road network data
     df_road = pd.DataFrame({
@@ -67,7 +71,7 @@ def run_seed():
     df_traffic_clean = pipeline.clean(df_traffic, target_cols=['speed', 'volume'])
     df_merged = pipeline.merge(df_traffic_clean, df_weather, df_road)
     
-    pipeline.save_processed(df_merged, 'data/processed/merged_data.parquet')
+    pipeline.save_processed(df_merged, os.path.join(DATA_ROOT, 'processed/merged_data.parquet'))
     
     # 2. Feature Engineering
     fe = FeatureEngineer(schema_version="v1.0")
@@ -96,7 +100,7 @@ def run_seed():
     c_model = CongestionModel(task="regression", version="v1.0.0")
     c_model.train(X_train, y_train)
     c_model.evaluate(X_test, y_test)
-    c_model.save("models")
+    c_model.save(MODELS_ROOT)
     
     # 4. Train Fuel Model
     # For fuel, we need a dataset mapping distance, efficiency, predicted_speed to fuel_l
@@ -128,7 +132,7 @@ def run_seed():
     
     f_model.train(fuel_X, y_fuel)
     f_model.evaluate(fuel_X_test, y_fuel_test)
-    f_model.save("models")
+    f_model.save(MODELS_ROOT)
     
     logger.info("Seed completed successfully.")
 
